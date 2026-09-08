@@ -363,7 +363,13 @@ function loadMyIssues() {
   if (!USER) return;
   $('mineSummary').textContent = '載入中…';
   apiGet({ action: 'getMyIssues', empId: USER.empId }, function(res){
-    MY_ISSUES = (res && res.success && Array.isArray(res.issues)) ? res.issues : [];
+    if (!res || !res.success) {
+      MY_ISSUES = [];
+      renderMyIssues();
+      $('mineSummary').textContent = '載入失敗：' + ((res && res.error) || '後端未回應') + '（後端可能尚未更新到新版本）';
+      return;
+    }
+    MY_ISSUES = Array.isArray(res.issues) ? res.issues : [];
     renderMyIssues();
   }, function(){
     $('mineSummary').textContent = '載入失敗，請稍後再試';
