@@ -357,6 +357,7 @@ function markAllRead(){
   var m = getReadMap();
   MY_ISSUES.forEach(function(it){ if (it.reply) m[it.id] = it.replyTime; });
   try { localStorage.setItem(READ_KEY, JSON.stringify(m)); } catch(e){}
+  $('mineDot').style.display = 'none';
 }
 
 function loadMyIssues() {
@@ -415,6 +416,9 @@ function renderMyIssues() {
       this.textContent = d.classList.contains('clamp') ? '展開全文' : '收合';
     });
   });
+
+  // 清單已經呈現在員工眼前 → 視為已讀（畫面上的 NEW 標記保留到下次重新載入）
+  if ($('viewMine').style.display !== 'none') markAllRead();
 }
 
 function loadSystems() {
@@ -506,7 +510,7 @@ document.querySelectorAll('.tab').forEach(function(t){
   t.addEventListener('click', function(){
     var v = this.getAttribute('data-view');
     show(v);
-    if (v === 'viewMine') { markAllRead(); renderMyIssues(); }
+    if (v === 'viewMine') renderMyIssues();
   });
 });
 $('btnReload').addEventListener('click', loadMyIssues);
