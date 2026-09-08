@@ -211,6 +211,7 @@
   <div class="tabs" id="tabs">
     <button type="button" class="tab active" data-view="viewForm" id="tabForm">＋ 回報問題</button>
     <button type="button" class="tab" data-view="viewMine" id="tabMine">我的回報 <span class="cnt" id="mineCnt">0</span><span class="dot" id="mineDot" style="display:none;"></span></button>
+    <button type="button" class="tab" data-view="viewAssigned" id="tabAssigned" style="display:none;">派給我的 <span class="cnt" id="asgCnt">0</span><span class="dot" id="asgDot" style="display:none;"></span></button>
   </div>
 
   <!-- 未登入提示 -->
@@ -287,6 +288,19 @@
     <div class="issue-list" id="issueList"></div>
   </div>
 
+  <!-- 派給我的 -->
+  <div class="card" id="viewAssigned" style="display:none;">
+    <div class="card-header">
+      <div class="card-title">派給我的</div>
+      <div class="card-meta">開發負責人指派給你處理的問題；處理完成後請告知負責人在試算表更新狀態與回覆。</div>
+    </div>
+    <div class="list-tools">
+      <span id="asgSummary">載入中…</span>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnReloadAsg">重新整理</button>
+    </div>
+    <div class="issue-list" id="assignedList"></div>
+  </div>
+
   <!-- 完成 -->
   <div class="card" id="viewDone" style="display:none;">
     <div class="done">
@@ -340,7 +354,7 @@ function apiPost(payload, cb, errCb) {
 
 function showMsg(t){ var m = $('formMsg'); m.className = 'msg'; m.textContent = t; }
 function show(view) {
-  ['viewNoLogin', 'viewForm', 'viewMine', 'viewDone'].forEach(function(id){ $(id).style.display = id === view ? 'block' : 'none'; });
+  ['viewNoLogin', 'viewForm', 'viewMine', 'viewAssigned', 'viewDone'].forEach(function(id){ $(id).style.display = id === view ? 'block' : 'none'; });
   $('tabs').style.display = (view === 'viewNoLogin') ? 'none' : 'flex';
   document.querySelectorAll('.tab').forEach(function(t){
     t.classList.toggle('active', t.getAttribute('data-view') === view || (view === 'viewDone' && t.id === 'tabForm'));
@@ -361,8 +375,9 @@ function init() {
   FILES = []; renderFiles();
   loadSystems();
   loadMyIssues();
-  var wantMine = new URLSearchParams(location.search).get('tab') === 'mine';
-  show(wantMine ? 'viewMine' : 'viewForm');
+  loadAssigned();
+  var tab = new URLSearchParams(location.search).get('tab');
+  show(tab === 'mine' ? 'viewMine' : tab === 'assigned' ? 'viewAssigned' : 'viewForm');
 }
 
 /* =========================================================
@@ -467,6 +482,83 @@ function renderMyIssues() {
   });
 }
 
+/* =========================================================
+ * 派給我的
+ * ========================================================= */
+var ASSIGNED = [];
+var SEEN_KEY = 'issueAssignedSeen';   // { 單號: true } 看過的派案（入口網外掛也會讀）
+var OPEN_ASG = null;
+function getSeen(){ try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '{}'); } catch(e){ return {}; } }
+function isOpenCase(it){ return it.status !== '已解決' && it.status !== '不處理'; }
+function isNewAsg(it){ return isOpenCase(it) && !getSeen()[it.id]; }
+function markSeen(it){ var m = getSeen(); m[it.id] = true; try { localStorage.setItem(SEEN_KEY, JSON.stringify(m)); } catch(e){} }
+
+function loadAssigned() {
+  if (!USER) return;
+  apiGet({ action: 'getAssignedIssues', empId: USER.empId, name: USER.name || '' }, function(res){
+    ASSIGNED = (res && res.success && Array.isArray(res.issues)) ? res.issues : [];
+    renderAssigned();
+  }, function(){ $('asgSummary').textContent = '載入失敗，請稍後再試'; });
+}
+
+function updateAsgSummary() {
+  var open = ASSIGNED.filter(isOpenCase).length, fresh = ASSIGNED.filter(isNewAsg).length;
+  // 曾經被派過案才顯示這個分頁
+  $('tabAssigned').style.display = ASSIGNED.length ? 'flex' : 'none';
+  $('asgCnt').textContent = open;
+  $('asgDot').style.display = fresh ? 'inline-block' : 'none';
+  $('asgSummary').textContent = ASSIGNED.length
+    ? '共 ' + ASSIGNED.length + ' 筆 · 未結案 ' + open + ' 筆' + (fresh ? ' · 新派案 ' + fresh + ' 筆' : '')
+    : '';
+}
+
+function renderAssigned() {
+  updateAsgSummary();
+  var box = $('assignedList');
+  if (!ASSIGNED.length) { box.innerHTML = '<div class="issue-empty">目前沒有派給你的案件。</div>'; return; }
+  var chev = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+  box.innerHTML = ASSIGNED.map(function(it){
+    var fresh = isNewAsg(it);
+    var snip = it.description.replace(/\s+/g, ' ').trim();
+    var att = it.attachments && it.attachments.length
+      ? '<div class="issue-att">' + it.attachments.map(function(u, k){ return '<a href="' + esc(u) + '" target="_blank" rel="noopener">截圖 ' + (k+1) + '</a>'; }).join('') + '</div>' : '';
+    var reply = it.reply
+      ? '<div class="issue-reply"><div class="issue-reply-head">💬 目前回覆給回報人<span class="t">' + esc(it.replyTime) + '</span></div><div class="issue-reply-body">' + esc(it.reply) + '</div></div>' : '';
+    var flag = fresh ? '<span class="issue-reply-flag">新派案</span>' : '';
+    var who = '<span class="issue-asg">' + esc(it.reporterName) + (it.reporterClinic ? ' · ' + esc(it.reporterClinic) : '') + '</span>';
+    return '<div class="issue-item' + (fresh ? ' unread' : '') + (OPEN_ASG === it.id ? ' open' : '') + '" data-id="' + esc(it.id) + '">' +
+      '<button type="button" class="issue-row" aria-expanded="' + (OPEN_ASG === it.id) + '">' +
+        '<span class="issue-dot"></span>' +
+        '<span class="issue-main">' +
+          '<span class="issue-line1"><span class="issue-sys">' + esc(it.system) + '</span><span class="st ' + statusClass(it.status) + '">' + esc(it.status) + '</span><span class="issue-time">' + esc(it.time) + '</span>' + who + '</span>' +
+          '<span class="issue-snip">' + esc(snip) + '</span>' +
+        '</span>' +
+        '<span class="issue-right">' + flag + chev + '</span>' +
+      '</button>' +
+      '<div class="issue-body">' +
+        '<div class="issue-meta">單號 ' + esc(it.id) + '　·　回報人：' + esc(it.reporterName) + '（' + esc(it.reporterEmpId) + '）</div>' +
+        '<div class="issue-desc">' + esc(it.description) + '</div>' + att + reply +
+      '</div>' +
+    '</div>';
+  }).join('');
+  box.querySelectorAll('.issue-row').forEach(function(row){
+    row.addEventListener('click', function(){
+      var item = this.parentNode, id = item.getAttribute('data-id');
+      var it = ASSIGNED.filter(function(x){ return x.id === id; })[0];
+      var willOpen = !item.classList.contains('open');
+      box.querySelectorAll('.issue-item.open').forEach(function(o){ o.classList.remove('open'); });
+      if (willOpen) {
+        item.classList.add('open'); OPEN_ASG = id;
+        if (it && isNewAsg(it)) {
+          markSeen(it); item.classList.remove('unread');
+          var f = item.querySelector('.issue-reply-flag'); if (f) f.remove();
+          updateAsgSummary();
+        }
+      } else { OPEN_ASG = null; }
+    });
+  });
+}
+
 function loadSystems() {
   var sel = $('issueSystem');
   sel.innerHTML = '<option value="">載入中…</option>';
@@ -557,9 +649,11 @@ document.querySelectorAll('.tab').forEach(function(t){
     var v = this.getAttribute('data-view');
     show(v);
     if (v === 'viewMine') renderMyIssues();
+    if (v === 'viewAssigned') renderAssigned();
   });
 });
 $('btnReload').addEventListener('click', loadMyIssues);
+$('btnReloadAsg').addEventListener('click', loadAssigned);
 $('btnSubmit').addEventListener('click', submit);
 $('btnRecheck').addEventListener('click', init);
 $('btnAnother').addEventListener('click', init);
@@ -577,7 +671,7 @@ $('issueFiles').addEventListener('change', function(e){
 window.addEventListener('focus', function(){
   var u = getPortalUser();
   if (!!u !== !!USER || (u && USER && u.empId !== USER.empId)) init();
-  else if (USER) loadMyIssues();
+  else if (USER) { loadMyIssues(); loadAssigned(); }
 });
 
 init();
