@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>金鶯診所 系統問題回報</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal-deep: #1B7678; --teal: #2A9D9F; --teal-light: #4FB8BA; --teal-soft: #9FD9DA;
+    --cream: #FDF8F0; --cream-deep: #F5EDDC;
+    --gold: #D4AF37; --gold-deep: #B8860B;
+    --brown: #2C5254; --brown-light: #5B7B7D; --text: #263B3C; --text-muted: #7A9091; --white: #FFFFFF;
+    --shadow: 0 4px 20px rgba(42,157,159,.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--text);
+    background: linear-gradient(135deg, #FDF8F0 0%, #F5EDDC 50%, #F0E4C8 100%);
+    min-height: 100vh;
+    padding: 28px 16px 48px;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(42,157,159,.10) 0%, transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(212,175,55,.08) 0%, transparent 45%);
+  }
+  .wrap { position: relative; z-index: 1; max-width: 640px; margin: 0 auto; }
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .brand-logo {
+    width: 46px; height: 46px; border-radius: 12px; background: var(--white);
+    box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .brand-logo img { width: 100%; height: 100%; object-fit: contain; }
+  .brand-title { font-family: 'Noto Serif TC', serif; font-size: 18px; font-weight: 700; color: var(--brown); letter-spacing: 2px; }
+  .brand-sub { font-size: 10.5px; color: var(--text-muted); letter-spacing: 3px; margin-top: 2px; }
+  .brand a { margin-left: auto; font-size: 12.5px; color: var(--teal-deep); text-decoration: none; }
+  .brand a:hover { text-decoration: underline; }
+
+  .card {
+    background: var(--white); border-radius: 16px; box-shadow: 0 20px 60px rgba(42,157,159,.14);
+    overflow: hidden; animation: cardIn .35s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes cardIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  .card-header { padding: 24px 28px 16px; border-bottom: 1px solid rgba(42,157,159,.15); }
+  .card-title { font-family: 'Noto Serif TC', serif; font-size: 21px; font-weight: 700; color: var(--brown); letter-spacing: 1px; }
+  .card-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 6px; letter-spacing: .5px; line-height: 1.6; }
+  .card-body { padding: 20px 28px 8px; }
+  .card-foot { padding: 12px 28px 24px; display: flex; justify-content: flex-end; gap: 10px; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 12.5px; color: var(--brown-light); letter-spacing: 1px; margin-bottom: 6px; font-weight: 500; }
+  .form-input {
+    width: 100%; padding: 11px 14px; border: 1.5px solid #D5E5E5; border-radius: 8px;
+    font-size: 14.5px; font-family: inherit; background: var(--cream); color: var(--text); transition: all .2s;
+  }
+  .form-input:focus { outline: none; border-color: var(--teal); background: var(--white); box-shadow: 0 0 0 3px rgba(42,157,159,.15); }
+  select.form-input {
+    cursor: pointer; appearance: none; -webkit-appearance: none; padding-right: 36px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%232A9D9F' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+  }
+  textarea.form-input { min-height: 150px; resize: vertical; line-height: 1.6; }
+  .form-hint { font-size: 11.5px; color: var(--text-muted); margin-top: 5px; letter-spacing: .3px; }
+
+  .reporter {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 11px 14px;
+    background: var(--cream); border: 1.5px solid #D5E5E5; border-radius: 8px; font-size: 14px; color: var(--brown);
+  }
+  .reporter .tag { font-size: 11px; padding: 2px 9px; border-radius: 10px; background: var(--teal-deep); color: #fff; letter-spacing: .5px; }
+  .reporter .muted { color: var(--text-muted); font-size: 12px; margin-left: auto; }
+
+  .notice {
+    padding: 16px 18px; border-radius: 10px; font-size: 14px; line-height: 1.7;
+    background: #FFF7E6; border: 1.5px solid #F2D8A0; color: #7A5A12;
+  }
+  .notice a { color: var(--teal-deep); font-weight: 700; }
+  .notice .btn-row { margin-top: 10px; }
+
+  .file-drop {
+    display: block; width: 100%; border: 1.5px dashed rgba(42,157,159,.4); border-radius: 10px;
+    padding: 18px 14px; text-align: center; background: var(--cream); cursor: pointer; transition: all .2s;
+  }
+  .file-drop:hover { border-color: var(--teal); background: var(--white); }
+  .file-drop input[type="file"] { display: none; }
+  .file-drop-text { display: block; font-size: 13px; color: var(--brown); letter-spacing: .5px; }
+  .file-drop-sub { display: block; font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+  .file-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .file-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--white);
+    border: 1px solid rgba(42,157,159,.15); border-radius: 8px; font-size: 12.5px;
+  }
+  .file-item-name { flex: 1; min-width: 0; color: var(--brown); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-item-size { color: var(--text-muted); font-size: 11px; }
+  .file-item-remove { background: none; border: none; color: #C0392B; cursor: pointer; font-size: 16px; padding: 0 4px; }
+
+  .msg { min-height: 20px; font-size: 12.5px; padding: 0 28px; color: #C0392B; }
+  .msg.ok { color: #2E7D32; }
+
+  .btn {
+    padding: 11px 22px; border-radius: 8px; font-family: inherit; font-size: 14px; cursor: pointer;
+    border: none; letter-spacing: 1.5px; transition: all .2s;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--teal), var(--teal-deep)); color: var(--white); box-shadow: 0 3px 10px rgba(42,157,159,.3); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(42,157,159,.4); }
+  .btn-primary:disabled { opacity: .6; cursor: wait; transform: none; }
+  .btn-ghost { background: var(--white); border: 1.5px solid #D5E5E5; color: var(--brown); }
+  .btn-ghost:hover { background: var(--cream-deep); }
+  .btn-sm { padding: 8px 16px; font-size: 13px; }
+
+  .spin {
+    display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4);
+    border-top-color: var(--white); border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .done { text-align: center; padding: 36px 28px 40px; }
+  .done-icon { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 16px; background: linear-gradient(135deg, var(--teal), var(--teal-deep)); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 6px 18px rgba(42,157,159,.35); }
+  .done-title { font-family: 'Noto Serif TC', serif; font-size: 20px; color: var(--brown); font-weight: 700; letter-spacing: 1px; }
+  .done-sub { font-size: 13px; color: var(--text-muted); margin-top: 8px; line-height: 1.7; }
+  .done-id { display: inline-block; margin-top: 12px; padding: 4px 12px; background: var(--cream-deep); border-radius: 12px; font-size: 12.5px; color: var(--brown); letter-spacing: 1px; }
+  .done .btn-row { margin-top: 22px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  .footer { text-align: center; font-size: 11px; color: var(--text-muted); letter-spacing: 2px; margin-top: 28px; }
+  @media (max-width: 520px) {
+    .card-header, .card-body, .card-foot, .msg { padding-left: 18px; padding-right: 18px; }
+    .reporter .muted { margin-left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="brand-logo"><img src="logo.png" alt="" onerror="this.style.display='none'"></div>
+    <div>
+      <div class="brand-title">金鶯診所</div>
+      <div class="brand-sub">SYSTEM ISSUE REPORT</div>
+    </div>
+    <a id="linkPortal" href="https://jason19820913-lab.github.io/drking/">← 回入口網站</a>
+  </div>
+
+  <!-- 未登入提示 -->
+  <div class="card" id="viewNoLogin" style="display:none;">
+    <div class="card-header">
+      <div class="card-title">請先登入入口網站</div>
+      <div class="card-meta">回報時需要記錄你的員編與姓名，這些資料來自入口網站的登入狀態。</div>
+    </div>
+    <div class="card-body">
+      <div class="notice">
+        目前這個瀏覽器沒有入口網站的登入紀錄。請先到入口網站登入（勾選「記住我」），再回到本頁即可自動帶入身分。
+        <div class="btn-row">
+          <a class="btn btn-primary btn-sm" style="text-decoration:none;display:inline-block;" href="https://jason19820913-lab.github.io/drking/">前往入口網站登入</a>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnRecheck">我已登入，重新檢查</button>
+        </div>
+      </div>
+    </div>
+    <div style="height:16px;"></div>
+  </div>
+
+  <!-- 回報表單 -->
+  <div class="card" id="viewForm" style="display:none;">
+    <div class="card-header">
+      <div class="card-title">回報系統問題</div>
+      <div class="card-meta">使用研發中的系統遇到錯誤、資料不對或操作卡住？在這裡回報，會直接通知開發負責人處理。</div>
+    </div>
+    <form class="card-body" id="issueForm" autocomplete="off" onsubmit="return false;">
+      <div class="form-group">
+        <label class="form-label">回報人（自動帶入入口網站登入身分）</label>
+        <div class="reporter">
+          <span class="tag" id="rEmpId">-</span>
+          <span id="rName">-</span>
+          <span class="muted" id="rMeta"></span>
+        </div>
+        <div class="form-hint">不是你本人？<a href="#" id="linkSwitch" style="color:var(--teal-deep);">到入口網站重新登入</a></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="issueSystem">發生問題的系統</label>
+        <select id="issueSystem" class="form-input" required>
+          <option value="">載入中…</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="issueDesc">問題描述</label>
+        <textarea id="issueDesc" class="form-input" maxlength="2000" required placeholder="請盡量寫清楚：在哪個頁面、做了什麼操作、看到什麼結果、預期應該是什麼。&#10;例如：在針劑系統查詢病人 A 時，剩餘可施打次數顯示 -1，實際應為 2。"></textarea>
+        <div class="form-hint">寫得越具體，修正越快 🙏</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">截圖（可選，最多 3 張）</label>
+        <label class="file-drop" for="issueFiles">
+          <span class="file-drop-text">＋ 點此選擇截圖</span>
+          <span class="file-drop-sub">支援 JPG / PNG / GIF / WebP / HEIC / PDF，每檔 ≤ 5MB</span>
+          <input type="file" id="issueFiles" multiple accept="application/pdf,image/*">
+        </label>
+        <div class="file-list" id="issueFileList"></div>
+      </div>
+    </form>
+    <div class="msg" id="formMsg"></div>
+    <div class="card-foot">
+      <button type="button" class="btn btn-primary" id="btnSubmit">送　出</button>
+    </div>
+  </div>
+
+  <!-- 完成 -->
+  <div class="card" id="viewDone" style="display:none;">
+    <div class="done">
+      <div class="done-icon">✓</div>
+      <div class="done-title">已送出，謝謝你的回報</div>
+      <div class="done-sub">開發負責人已收到通知，處理進度會再回覆你。</div>
+      <div class="done-id" id="doneId"></div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost btn-sm" id="btnAnother">再回報一個問題</button>
+        <a class="btn btn-primary btn-sm" style="text-decoration:none;display:inline-block;" href="https://jason19820913-lab.github.io/drking/">回入口網站</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">© 金鶯診所 ELITE CLINIC</div>
+</div>
+
+<script>
+/* =========================================================
+ * 設定 — 部署 Apps Script 後把 Web App 網址填到 API
+ * ========================================================= */
+var API = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+var PORTAL_URL = 'https://jason19820913-lab.github.io/drking/';
+var PORTAL_STORAGE_KEY = 'eliteClinicPortalUser';   // 入口網站登入後存的 localStorage key（同網域共用）
+var ROLE_LABEL = { doctor: '醫師', nurse: '護理師', desk: '櫃檯', assistant: '助理', admin: '管理員', staff: '員工' };
+var MAX_FILES = 3, MAX_SIZE = 5 * 1024 * 1024;
+
+var USER = null;
+var FILES = [];
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function fmtBytes(b){ return b < 1024 ? b + ' B' : b < 1048576 ? (b/1024).toFixed(1) + ' KB' : (b/1048576).toFixed(1) + ' MB'; }
+
+// 讀取入口網站的登入身分（同網域 jason19820913-lab.github.io 共用 localStorage）
+function getPortalUser() {
+  try {
+    var u = JSON.parse(localStorage.getItem(PORTAL_STORAGE_KEY) || 'null');
+    return (u && u.empId && u.name) ? u : null;
+  } catch (e) { return null; }
+}
+
+function apiGet(params, cb, errCb) {
+  var q = Object.keys(params).map(function(k){ return encodeURIComponent(k) + '=' + encodeURIComponent(params[k] == null ? '' : params[k]); }).join('&');
+  fetch(API + '?' + q).then(function(r){ return r.json(); }).then(cb).catch(errCb || console.error);
+}
+function apiPost(payload, cb, errCb) {
+  fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload), redirect: 'follow' })
+    .then(function(r){ return r.json(); }).then(cb).catch(errCb || console.error);
+}
+
+function showMsg(t){ var m = $('formMsg'); m.className = 'msg'; m.textContent = t; }
+function show(view) {
+  ['viewNoLogin', 'viewForm', 'viewDone'].forEach(function(id){ $(id).style.display = id === view ? 'block' : 'none'; });
+}
+
+function init() {
+  USER = getPortalUser();
+  if (!USER) { show('viewNoLogin'); return; }
+
+  $('rEmpId').textContent = USER.empId;
+  $('rName').textContent = USER.name;
+  var meta = [USER.clinic, (USER.title && USER.title.trim()) || ROLE_LABEL[USER.role] || ''].filter(Boolean).join(' · ');
+  $('rMeta').textContent = meta;
+
+  $('issueDesc').value = '';
+  $('formMsg').textContent = ''; $('formMsg').className = 'msg';
+  FILES = []; renderFiles();
+  loadSystems();
+  show('viewForm');
+}
+
+function loadSystems() {
+  var sel = $('issueSystem');
+  sel.innerHTML = '<option value="">載入中…</option>';
+  apiGet({ action: 'getIssueSystems' }, function(res){
+    var list = (res && res.success && Array.isArray(res.systems)) ? res.systems : [];
+    if (!list.length) { sel.innerHTML = '<option value="">（目前沒有可選的系統）</option>'; return; }
+    // 網址帶 ?system=xxx 可預選（例如從某個系統頁面連過來）
+    var pre = new URLSearchParams(location.search).get('system') || '';
+    sel.innerHTML = '<option value="">請選擇系統</option>' + list.map(function(s){
+      return '<option value="' + esc(s) + '"' + (s === pre ? ' selected' : '') + '>' + esc(s) + '</option>';
+    }).join('');
+  }, function(){
+    sel.innerHTML = '<option value="">（載入失敗，請重新整理）</option>';
+  });
+}
+
+function renderFiles() {
+  var box = $('issueFileList');
+  box.innerHTML = FILES.map(function(f, i){
+    return '<div class="file-item"><span>🖼️</span><span class="file-item-name">' + esc(f.name) + '</span>' +
+      '<span class="file-item-size">' + fmtBytes(f.size) + '</span>' +
+      '<button type="button" class="file-item-remove" data-idx="' + i + '" aria-label="移除">✕</button></div>';
+  }).join('');
+  box.querySelectorAll('.file-item-remove').forEach(function(b){
+    b.addEventListener('click', function(){ FILES.splice(parseInt(this.getAttribute('data-idx'), 10), 1); renderFiles(); });
+  });
+}
+
+function readFiles(cb) {
+  var out = [], i = 0;
+  (function next(){
+    if (i >= FILES.length) { cb(out); return; }
+    var f = FILES[i], r = new FileReader();
+    r.onload = function(){
+      var d = String(r.result), c = d.indexOf(',');
+      out.push({ name: f.name, mimeType: f.type || 'application/octet-stream', dataBase64: c >= 0 ? d.substring(c + 1) : d });
+      i++; next();
+    };
+    r.onerror = function(){ i++; next(); };
+    r.readAsDataURL(f);
+  })();
+}
+
+function submit() {
+  var system = $('issueSystem').value, desc = $('issueDesc').value.trim();
+  var msg = $('formMsg'), btn = $('btnSubmit');
+  msg.textContent = ''; msg.className = 'msg';
+
+  // 送出前再確認一次登入狀態（避免中途在別的分頁登出/換人）
+  USER = getPortalUser();
+  if (!USER) { show('viewNoLogin'); return; }
+  if (!system) { msg.textContent = '請選擇發生問題的系統'; $('issueSystem').focus(); return; }
+  if (!desc) { msg.textContent = '請描述遇到的問題'; $('issueDesc').focus(); return; }
+  if (desc.length < 5) { msg.textContent = '描述再多寫一點，方便判斷問題'; return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>' + (FILES.length ? '處理截圖…' : '送出中…');
+
+  readFiles(function(attachments){
+    btn.innerHTML = '<span class="spin"></span>送出中…';
+    apiPost({
+      action: 'submitIssue',
+      empId: USER.empId, name: USER.name || '', clinic: USER.clinic || '',
+      title: USER.title || '', role: USER.role || '',
+      system: system, description: desc,
+      pageUrl: location.href, userAgent: navigator.userAgent,
+      attachments: attachments
+    }, function(res){
+      btn.disabled = false; btn.textContent = '送　出';
+      if (res && res.success) {
+        $('doneId').textContent = '單號 ' + (res.id || '');
+        FILES = [];
+        show('viewDone');
+        window.scrollTo(0, 0);
+      } else {
+        msg.textContent = (res && res.error) ? res.error : '送出失敗，請稍後再試';
+      }
+    }, function(){
+      btn.disabled = false; btn.textContent = '送　出';
+      msg.textContent = '連線失敗，請稍後再試';
+    });
+  });
+}
+
+$('btnSubmit').addEventListener('click', submit);
+$('btnRecheck').addEventListener('click', init);
+$('btnAnother').addEventListener('click', init);
+$('linkSwitch').addEventListener('click', function(e){ e.preventDefault(); location.href = PORTAL_URL; });
+$('issueFiles').addEventListener('change', function(e){
+  Array.prototype.slice.call(e.target.files).forEach(function(f){
+    if (FILES.length >= MAX_FILES) { showMsg('最多只能附 ' + MAX_FILES + ' 張截圖'); return; }
+    if (f.size > MAX_SIZE) { showMsg('「' + f.name + '」超過 5MB，已略過'); return; }
+    FILES.push(f);
+  });
+  e.target.value = '';
+  renderFiles();
+});
+// 從別的分頁登入/登出後，回到本頁自動更新
+window.addEventListener('focus', function(){ var u = getPortalUser(); if (!!u !== !!USER || (u && USER && u.empId !== USER.empId)) init(); });
+
+init();
+</script>
+</body>
+</html>
