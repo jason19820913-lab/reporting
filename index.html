@@ -126,6 +126,50 @@
   .done .btn-row { margin-top: 22px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
   .footer { text-align: center; font-size: 11px; color: var(--text-muted); letter-spacing: 2px; margin-top: 28px; }
+
+  /* 分頁切換 */
+  .tabs { display: none; gap: 6px; margin-bottom: 14px; }
+  .tab {
+    padding: 9px 18px; border-radius: 20px; border: 1.5px solid #D5E5E5; background: var(--white);
+    color: var(--brown); font-family: inherit; font-size: 13.5px; cursor: pointer; letter-spacing: 1px;
+    display: flex; align-items: center; gap: 6px; transition: all .2s;
+  }
+  .tab.active { background: linear-gradient(135deg, var(--teal), var(--teal-deep)); color: #fff; border-color: transparent; box-shadow: 0 3px 10px rgba(42,157,159,.3); }
+  .tab .cnt { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: rgba(0,0,0,.08); }
+  .tab.active .cnt { background: rgba(255,255,255,.25); }
+  .tab .dot { width: 8px; height: 8px; border-radius: 50%; background: #E67E22; box-shadow: 0 0 0 3px rgba(230,126,34,.25); }
+
+  /* 我的回報 */
+  .issue-list { padding: 8px 28px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .issue-empty { text-align: center; padding: 36px 20px; color: var(--text-muted); font-size: 13.5px; line-height: 1.7; }
+  .issue-item { border: 1.5px solid #E3ECEC; border-radius: 12px; padding: 14px 16px; background: var(--white); transition: all .2s; }
+  .issue-item.unread { border-color: #F2C08A; background: #FFFBF4; }
+  .issue-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .issue-sys { font-weight: 700; color: var(--brown); font-size: 14.5px; }
+  .issue-time { font-size: 11.5px; color: var(--text-muted); }
+  .issue-id { font-size: 11px; color: var(--text-muted); margin-left: auto; letter-spacing: .5px; }
+  .st { font-size: 11px; padding: 2px 9px; border-radius: 10px; font-weight: 700; letter-spacing: .5px; }
+  .st-wait { background: #EEF1F1; color: #6B7F80; }
+  .st-doing { background: #FFF3E0; color: #C0700A; }
+  .st-done { background: #E6F4EA; color: #2E7D32; }
+  .st-skip { background: #F3E9E9; color: #9B4B4B; }
+  .issue-desc { font-size: 13.5px; color: var(--text); line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+  .issue-desc.clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .issue-more { background: none; border: none; color: var(--teal-deep); font-size: 12px; cursor: pointer; font-family: inherit; padding: 4px 0 0; }
+  .issue-att { margin-top: 6px; font-size: 12px; }
+  .issue-att a { color: var(--teal-deep); margin-right: 10px; }
+  .issue-reply {
+    margin-top: 12px; padding: 12px 14px; border-radius: 10px; border-left: 3px solid var(--teal);
+    background: linear-gradient(135deg, rgba(42,157,159,.07), rgba(212,175,55,.06));
+  }
+  .issue-reply-head { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--teal-deep); font-weight: 700; letter-spacing: .5px; margin-bottom: 6px; }
+  .issue-reply-head .new { background: #E67E22; color: #fff; font-size: 10px; padding: 1px 7px; border-radius: 8px; }
+  .issue-reply-head .t { margin-left: auto; font-weight: 400; color: var(--text-muted); }
+  .issue-reply-body { font-size: 13.5px; color: var(--text); line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+  .issue-noreply { margin-top: 10px; font-size: 12px; color: var(--text-muted); }
+  .list-tools { display: flex; align-items: center; padding: 14px 28px 0; gap: 10px; font-size: 12.5px; color: var(--text-muted); }
+  .list-tools button { margin-left: auto; }
+  @media (max-width: 520px) { .issue-list, .list-tools { padding-left: 18px; padding-right: 18px; } }
   @media (max-width: 520px) {
     .card-header, .card-body, .card-foot, .msg { padding-left: 18px; padding-right: 18px; }
     .reporter .muted { margin-left: 0; width: 100%; }
@@ -141,6 +185,12 @@
       <div class="brand-sub">SYSTEM ISSUE REPORT</div>
     </div>
     <a id="linkPortal" href="https://jason19820913-lab.github.io/drking/">← 回入口網站</a>
+  </div>
+
+  <!-- 分頁切換（登入後才顯示） -->
+  <div class="tabs" id="tabs">
+    <button type="button" class="tab active" data-view="viewForm" id="tabForm">＋ 回報問題</button>
+    <button type="button" class="tab" data-view="viewMine" id="tabMine">我的回報 <span class="cnt" id="mineCnt">0</span><span class="dot" id="mineDot" style="display:none;"></span></button>
   </div>
 
   <!-- 未登入提示 -->
@@ -204,6 +254,19 @@
     </div>
   </div>
 
+  <!-- 我的回報 -->
+  <div class="card" id="viewMine" style="display:none;">
+    <div class="card-header">
+      <div class="card-title">我的回報</div>
+      <div class="card-meta">你過去提出的問題與處理狀態；開發負責人回覆後會顯示在這裡。</div>
+    </div>
+    <div class="list-tools">
+      <span id="mineSummary">載入中…</span>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnReload">重新整理</button>
+    </div>
+    <div class="issue-list" id="issueList"></div>
+  </div>
+
   <!-- 完成 -->
   <div class="card" id="viewDone" style="display:none;">
     <div class="done">
@@ -257,7 +320,11 @@ function apiPost(payload, cb, errCb) {
 
 function showMsg(t){ var m = $('formMsg'); m.className = 'msg'; m.textContent = t; }
 function show(view) {
-  ['viewNoLogin', 'viewForm', 'viewDone'].forEach(function(id){ $(id).style.display = id === view ? 'block' : 'none'; });
+  ['viewNoLogin', 'viewForm', 'viewMine', 'viewDone'].forEach(function(id){ $(id).style.display = id === view ? 'block' : 'none'; });
+  $('tabs').style.display = (view === 'viewNoLogin') ? 'none' : 'flex';
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.classList.toggle('active', t.getAttribute('data-view') === view || (view === 'viewDone' && t.id === 'tabForm'));
+  });
 }
 
 function init() {
@@ -273,7 +340,75 @@ function init() {
   $('formMsg').textContent = ''; $('formMsg').className = 'msg';
   FILES = []; renderFiles();
   loadSystems();
-  show('viewForm');
+  loadMyIssues();
+  var wantMine = new URLSearchParams(location.search).get('tab') === 'mine';
+  show(wantMine ? 'viewMine' : 'viewForm');
+}
+
+/* =========================================================
+ * 我的回報
+ * ========================================================= */
+var MY_ISSUES = [];
+var READ_KEY = 'issueReadReplies';   // { 單號: 回覆時間 } 已讀紀錄（同網域，入口網外掛也會讀）
+
+function getReadMap(){ try { return JSON.parse(localStorage.getItem(READ_KEY) || '{}'); } catch(e){ return {}; } }
+function isUnread(it){ return !!it.reply && getReadMap()[it.id] !== it.replyTime; }
+function markAllRead(){
+  var m = getReadMap();
+  MY_ISSUES.forEach(function(it){ if (it.reply) m[it.id] = it.replyTime; });
+  try { localStorage.setItem(READ_KEY, JSON.stringify(m)); } catch(e){}
+}
+
+function loadMyIssues() {
+  if (!USER) return;
+  $('mineSummary').textContent = '載入中…';
+  apiGet({ action: 'getMyIssues', empId: USER.empId }, function(res){
+    MY_ISSUES = (res && res.success && Array.isArray(res.issues)) ? res.issues : [];
+    renderMyIssues();
+  }, function(){
+    $('mineSummary').textContent = '載入失敗，請稍後再試';
+  });
+}
+
+function statusClass(s){ return s === '已解決' ? 'st-done' : s === '處理中' ? 'st-doing' : s === '不處理' ? 'st-skip' : 'st-wait'; }
+
+function renderMyIssues() {
+  var unread = MY_ISSUES.filter(isUnread).length;
+  var open = MY_ISSUES.filter(function(i){ return i.status !== '已解決' && i.status !== '不處理'; }).length;
+  $('mineCnt').textContent = MY_ISSUES.length;
+  $('mineDot').style.display = unread ? 'inline-block' : 'none';
+  $('mineSummary').textContent = MY_ISSUES.length
+    ? '共 ' + MY_ISSUES.length + ' 筆 · 處理中 ' + open + ' 筆' + (unread ? ' · 新回覆 ' + unread + ' 筆' : '')
+    : '';
+
+  var box = $('issueList');
+  if (!MY_ISSUES.length) {
+    box.innerHTML = '<div class="issue-empty">還沒有回報紀錄。<br>遇到系統問題時，用「回報問題」告訴我們。</div>';
+    return;
+  }
+  box.innerHTML = MY_ISSUES.map(function(it, i){
+    var un = isUnread(it);
+    var att = it.attachments && it.attachments.length
+      ? '<div class="issue-att">' + it.attachments.map(function(u, k){ return '<a href="' + esc(u) + '" target="_blank" rel="noopener">截圖 ' + (k+1) + '</a>'; }).join('') + '</div>' : '';
+    var reply = it.reply
+      ? '<div class="issue-reply"><div class="issue-reply-head">💬 開發負責人回覆' + (un ? '<span class="new">NEW</span>' : '') + '<span class="t">' + esc(it.replyTime) + '</span></div><div class="issue-reply-body">' + esc(it.reply) + '</div></div>'
+      : '<div class="issue-noreply">尚未回覆，處理後會顯示在這裡。</div>';
+    var long = it.description.length > 120 || (it.description.match(/\n/g) || []).length >= 3;
+    return '<div class="issue-item' + (un ? ' unread' : '') + '">' +
+      '<div class="issue-top"><span class="issue-sys">' + esc(it.system) + '</span>' +
+      '<span class="st ' + statusClass(it.status) + '">' + esc(it.status) + '</span>' +
+      '<span class="issue-time">' + esc(it.time) + '</span><span class="issue-id">' + esc(it.id) + '</span></div>' +
+      '<div class="issue-desc' + (long ? ' clamp' : '') + '" id="desc' + i + '">' + esc(it.description) + '</div>' +
+      (long ? '<button type="button" class="issue-more" data-i="' + i + '">展開全文</button>' : '') +
+      att + reply + '</div>';
+  }).join('');
+  box.querySelectorAll('.issue-more').forEach(function(b){
+    b.addEventListener('click', function(){
+      var d = $('desc' + this.getAttribute('data-i'));
+      d.classList.toggle('clamp');
+      this.textContent = d.classList.contains('clamp') ? '展開全文' : '收合';
+    });
+  });
 }
 
 function loadSystems() {
@@ -348,6 +483,7 @@ function submit() {
       if (res && res.success) {
         $('doneId').textContent = '單號 ' + (res.id || '');
         FILES = [];
+        loadMyIssues();
         show('viewDone');
         window.scrollTo(0, 0);
       } else {
@@ -360,6 +496,14 @@ function submit() {
   });
 }
 
+document.querySelectorAll('.tab').forEach(function(t){
+  t.addEventListener('click', function(){
+    var v = this.getAttribute('data-view');
+    show(v);
+    if (v === 'viewMine') { markAllRead(); renderMyIssues(); }
+  });
+});
+$('btnReload').addEventListener('click', loadMyIssues);
 $('btnSubmit').addEventListener('click', submit);
 $('btnRecheck').addEventListener('click', init);
 $('btnAnother').addEventListener('click', init);
@@ -374,7 +518,11 @@ $('issueFiles').addEventListener('change', function(e){
   renderFiles();
 });
 // 從別的分頁登入/登出後，回到本頁自動更新
-window.addEventListener('focus', function(){ var u = getPortalUser(); if (!!u !== !!USER || (u && USER && u.empId !== USER.empId)) init(); });
+window.addEventListener('focus', function(){
+  var u = getPortalUser();
+  if (!!u !== !!USER || (u && USER && u.empId !== USER.empId)) init();
+  else if (USER) loadMyIssues();
+});
 
 init();
 </script>
