@@ -158,6 +158,7 @@
   .issue-time { font-size: 11.5px; color: var(--text-muted); }
   .issue-snip { display: block; margin-top: 3px; font-size: 12.5px; color: var(--brown-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .issue-right { display: flex; align-items: center; gap: 8px; }
+  .issue-asg { font-size: 11px; color: var(--brown-light); background: var(--cream-deep); padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
   .issue-reply-flag { font-size: 11px; color: var(--teal-deep); background: rgba(42,157,159,.1); padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
   .issue-item.unread .issue-reply-flag { background: #E67E22; color: #fff; }
   .chev { width: 18px; height: 18px; color: var(--text-muted); transition: transform .2s; flex-shrink: 0; }
@@ -425,17 +426,18 @@ function renderMyIssues() {
       ? '<div class="issue-reply"><div class="issue-reply-head">💬 開發負責人回覆<span class="t">' + esc(it.replyTime) + '</span></div><div class="issue-reply-body">' + esc(it.reply) + '</div></div>'
       : '<div class="issue-noreply">尚未回覆，處理後會顯示在這裡。</div>';
     var flag = it.reply ? '<span class="issue-reply-flag">' + (un ? '新回覆' : '已回覆') + '</span>' : '';
+    var asg = it.assignee ? '<span class="issue-asg">👤 ' + esc(it.assignee) + '</span>' : '';
     return '<div class="issue-item' + (un ? ' unread' : '') + (OPEN_ID === it.id ? ' open' : '') + '" data-id="' + esc(it.id) + '">' +
       '<button type="button" class="issue-row" aria-expanded="' + (OPEN_ID === it.id) + '">' +
         '<span class="issue-dot"></span>' +
         '<span class="issue-main">' +
-          '<span class="issue-line1"><span class="issue-sys">' + esc(it.system) + '</span><span class="st ' + statusClass(it.status) + '">' + esc(it.status) + '</span><span class="issue-time">' + esc(it.time) + '</span></span>' +
+          '<span class="issue-line1"><span class="issue-sys">' + esc(it.system) + '</span><span class="st ' + statusClass(it.status) + '">' + esc(it.status) + '</span><span class="issue-time">' + esc(it.time) + '</span>' + asg + '</span>' +
           '<span class="issue-snip">' + esc(snip) + '</span>' +
         '</span>' +
         '<span class="issue-right">' + flag + chev + '</span>' +
       '</button>' +
       '<div class="issue-body">' +
-        '<div class="issue-meta">單號 ' + esc(it.id) + '</div>' +
+        '<div class="issue-meta">單號 ' + esc(it.id) + (it.assignee ? '　·　派案給：<b style="color:var(--brown)">' + esc(it.assignee) + '</b>' : '　·　尚未派案') + '</div>' +
         '<div class="issue-desc">' + esc(it.description) + '</div>' + att + reply +
       '</div>' +
     '</div>';
