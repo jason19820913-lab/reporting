@@ -182,6 +182,27 @@
   .issue-reply-head .t { margin-left: auto; font-weight: 400; color: var(--text-muted); }
   .issue-reply-body { font-size: 13.5px; color: var(--text); line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
   .issue-noreply { margin-top: 10px; font-size: 12px; color: var(--text-muted); }
+  /* 處理進度串 */
+  .prog { margin-top: 12px; }
+  .prog-title { font-size: 12px; color: var(--brown-light); font-weight: 700; letter-spacing: .5px; margin-bottom: 6px; }
+  .prog-item { position: relative; padding: 8px 12px 8px 18px; border-left: 2px solid var(--teal-soft); margin-left: 4px; }
+  .prog-item::before { content: ''; position: absolute; left: -6px; top: 13px; width: 10px; height: 10px; border-radius: 50%; background: var(--teal); border: 2px solid #fff; }
+  .prog-head { font-size: 12px; color: var(--teal-deep); font-weight: 700; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .prog-head .t { color: var(--text-muted); font-weight: 400; }
+  .prog-head .st { font-size: 10.5px; }
+  .prog-body { font-size: 13.5px; color: var(--text); line-height: 1.6; white-space: pre-wrap; word-break: break-word; margin-top: 3px; }
+  .prog-att { font-size: 12px; margin-top: 3px; }
+  .prog-att a { color: var(--teal-deep); margin-right: 10px; }
+  /* 被派案人員回覆表單 */
+  .prog-form { margin-top: 14px; padding: 14px; border-radius: 10px; background: var(--cream); border: 1.5px solid #E3ECEC; }
+  .prog-form .form-label { margin-bottom: 6px; }
+  .prog-form textarea.form-input { min-height: 90px; background: var(--white); }
+  .prog-form .file-drop { padding: 12px; background: var(--white); }
+  .prog-form-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .prog-form-foot select.form-input { width: auto; padding: 8px 36px 8px 12px; font-size: 13px; background-color: var(--white); }
+  .prog-form-foot .btn { margin-left: auto; }
+  .prog-msg { font-size: 12.5px; color: #C0392B; min-height: 18px; margin-top: 6px; }
+  .prog-msg.ok { color: #2E7D32; }
   .list-tools { display: flex; align-items: center; padding: 14px 28px 0; gap: 10px; font-size: 12.5px; color: var(--text-muted); }
   .list-tools button { margin-left: auto; }
   @media (max-width: 520px) {
@@ -292,7 +313,7 @@
   <div class="card" id="viewAssigned" style="display:none;">
     <div class="card-header">
       <div class="card-title">派給我的</div>
-      <div class="card-meta">開發負責人指派給你處理的問題；處理完成後請告知負責人在試算表更新狀態與回覆。</div>
+      <div class="card-meta">開發負責人指派給你處理的問題。展開案件後可直接回覆處理情形、附上檔案並更新狀態，會同步寫入試算表並通知負責人。</div>
     </div>
     <div class="list-tools">
       <span id="asgSummary">載入中…</span>
@@ -387,13 +408,26 @@ var MY_ISSUES = [];
 var READ_KEY = 'issueReadReplies';   // { 單號: 回覆時間 } 已讀紀錄（同網域，入口網外掛也會讀）
 
 function getReadMap(){ try { return JSON.parse(localStorage.getItem(READ_KEY) || '{}'); } catch(e){ return {}; } }
-function isUnread(it){ return !!it.reply && getReadMap()[it.id] !== it.replyTime; }
+function activityOf(it){ return it.lastActivity || it.replyTime || ''; }
+function isUnread(it){ var a = activityOf(it); return !!a && getReadMap()[it.id] !== a; }
 function markRead(it){
-  if (!it.reply) return;
-  var m = getReadMap(); m[it.id] = it.replyTime;
+  var a = activityOf(it); if (!a) return;
+  var m = getReadMap(); m[it.id] = a;
   try { localStorage.setItem(READ_KEY, JSON.stringify(m)); } catch(e){}
 }
 var OPEN_ID = null;   // 目前展開的單號
+
+// 處理進度串（回報人與被派案者都看得到）
+function renderProgress(list, title) {
+  if (!list || !list.length) return '';
+  return '<div class="prog"><div class="prog-title">' + (title || '🛠 處理進度') + '</div>' + list.map(function(pg){
+    var att = pg.attachments && pg.attachments.length
+      ? '<div class="prog-att">' + pg.attachments.map(function(u,k){ return '<a href="' + esc(u) + '" target="_blank" rel="noopener">附件 ' + (k+1) + '</a>'; }).join('') + '</div>' : '';
+    var st = pg.statusChange ? '<span class="st ' + statusClass(pg.statusChange) + '">→ ' + esc(pg.statusChange) + '</span>' : '';
+    return '<div class="prog-item"><div class="prog-head">' + esc(pg.name) + st + '<span class="t">' + esc(pg.time) + '</span></div>' +
+      '<div class="prog-body">' + esc(pg.content) + '</div>' + att + '</div>';
+  }).join('') + '</div>';
+}
 
 function loadMyIssues() {
   if (!USER) return;
@@ -439,8 +473,9 @@ function renderMyIssues() {
       ? '<div class="issue-att">' + it.attachments.map(function(u, k){ return '<a href="' + esc(u) + '" target="_blank" rel="noopener">截圖 ' + (k+1) + '</a>'; }).join('') + '</div>' : '';
     var reply = it.reply
       ? '<div class="issue-reply"><div class="issue-reply-head">💬 開發負責人回覆<span class="t">' + esc(it.replyTime) + '</span></div><div class="issue-reply-body">' + esc(it.reply) + '</div></div>'
-      : '<div class="issue-noreply">尚未回覆，處理後會顯示在這裡。</div>';
-    var flag = it.reply ? '<span class="issue-reply-flag">' + (un ? '新回覆' : '已回覆') + '</span>' : '';
+      : ((it.progress && it.progress.length) ? '' : '<div class="issue-noreply">尚未回覆，處理後會顯示在這裡。</div>');
+    var hasAct = !!it.reply || (it.progress && it.progress.length);
+    var flag = hasAct ? '<span class="issue-reply-flag">' + (un ? '新進度' : '已回覆') + '</span>' : '';
     var asg = it.assignee ? '<span class="issue-asg">👤 ' + esc(it.assignee) + '</span>' : '';
     return '<div class="issue-item' + (un ? ' unread' : '') + (OPEN_ID === it.id ? ' open' : '') + '" data-id="' + esc(it.id) + '">' +
       '<button type="button" class="issue-row" aria-expanded="' + (OPEN_ID === it.id) + '">' +
@@ -453,7 +488,7 @@ function renderMyIssues() {
       '</button>' +
       '<div class="issue-body">' +
         '<div class="issue-meta">單號 ' + esc(it.id) + (it.assignee ? '　·　派案給：<b style="color:var(--brown)">' + esc(it.assignee) + '</b>' : '　·　尚未派案') + '</div>' +
-        '<div class="issue-desc">' + esc(it.description) + '</div>' + att + reply +
+        '<div class="issue-desc">' + esc(it.description) + '</div>' + att + renderProgress(it.progress) + reply +
       '</div>' +
     '</div>';
   }).join('');
@@ -512,6 +547,106 @@ function updateAsgSummary() {
     : '';
 }
 
+var PROG_FILES = {};   // { 單號: [File...] }
+
+function progressForm(it) {
+  var closed = it.status === '已解決' || it.status === '不處理';
+  return '<div class="prog-form" data-id="' + esc(it.id) + '">' +
+    '<label class="form-label">' + (closed ? '補充處理情形' : '回覆處理情形') + '</label>' +
+    '<textarea class="form-input prog-text" maxlength="2000" placeholder="說明你做了什麼、目前狀況、還需要什麼配合…"></textarea>' +
+    '<div style="margin-top:8px;">' +
+      '<label class="file-drop"><span class="file-drop-text">＋ 附上截圖 / 檔案（最多 3 個，每檔 ≤ 5MB）</span>' +
+      '<input type="file" class="prog-files" multiple accept="application/pdf,image/*"></label>' +
+      '<div class="file-list prog-file-list"></div>' +
+    '</div>' +
+    '<div class="prog-form-foot">' +
+      '<select class="form-input prog-status">' +
+        '<option value="">狀態：維持「' + esc(it.status) + '」</option>' +
+        (it.status !== '處理中' ? '<option value="處理中">改為「處理中」</option>' : '') +
+        (it.status !== '已解決' ? '<option value="已解決">改為「已解決」（結案）</option>' : '') +
+      '</select>' +
+      '<button type="button" class="btn btn-primary btn-sm prog-submit">送出處理情形</button>' +
+    '</div>' +
+    '<div class="prog-msg"></div>' +
+  '</div>';
+}
+
+function renderProgFiles(form) {
+  var id = form.getAttribute('data-id'), list = PROG_FILES[id] || [];
+  var box = form.querySelector('.prog-file-list');
+  box.innerHTML = list.map(function(f, i){
+    return '<div class="file-item"><span>📎</span><span class="file-item-name">' + esc(f.name) + '</span>' +
+      '<span class="file-item-size">' + fmtBytes(f.size) + '</span>' +
+      '<button type="button" class="file-item-remove" data-idx="' + i + '">✕</button></div>';
+  }).join('');
+  box.querySelectorAll('.file-item-remove').forEach(function(b){
+    b.addEventListener('click', function(){ list.splice(parseInt(this.getAttribute('data-idx'), 10), 1); renderProgFiles(form); });
+  });
+}
+
+function bindProgressForms(box) {
+  box.querySelectorAll('.prog-form').forEach(function(form){
+    var id = form.getAttribute('data-id');
+    var msg = form.querySelector('.prog-msg');
+    form.querySelector('.prog-files').addEventListener('change', function(e){
+      PROG_FILES[id] = PROG_FILES[id] || [];
+      Array.prototype.slice.call(e.target.files).forEach(function(f){
+        if (PROG_FILES[id].length >= MAX_FILES) { msg.className = 'prog-msg'; msg.textContent = '最多只能附 ' + MAX_FILES + ' 個檔案'; return; }
+        if (f.size > MAX_SIZE) { msg.className = 'prog-msg'; msg.textContent = '「' + f.name + '」超過 5MB，已略過'; return; }
+        PROG_FILES[id].push(f);
+      });
+      e.target.value = '';
+      renderProgFiles(form);
+    });
+    form.querySelector('.prog-submit').addEventListener('click', function(){
+      var btn = this;
+      var content = form.querySelector('.prog-text').value.trim();
+      var status = form.querySelector('.prog-status').value;
+      msg.className = 'prog-msg'; msg.textContent = '';
+      USER = getPortalUser();
+      if (!USER) { show('viewNoLogin'); return; }
+      if (!content) { msg.textContent = '請填寫處理情形'; form.querySelector('.prog-text').focus(); return; }
+      btn.disabled = true; btn.innerHTML = '<span class="spin"></span>送出中…';
+      var files = PROG_FILES[id] || [];
+      readFileList(files, function(attachments){
+        apiPost({
+          action: 'addProgress', issueId: id,
+          empId: USER.empId, name: USER.name || '',
+          content: content, status: status, attachments: attachments
+        }, function(res){
+          btn.disabled = false; btn.textContent = '送出處理情形';
+          if (res && res.success) {
+            msg.className = 'prog-msg ok'; msg.textContent = '✓ 已送出，負責人已收到通知';
+            PROG_FILES[id] = [];
+            setTimeout(function(){ loadAssigned(); }, 900);
+          } else {
+            msg.textContent = (res && res.error) ? res.error : '送出失敗，請稍後再試';
+          }
+        }, function(){
+          btn.disabled = false; btn.textContent = '送出處理情形';
+          msg.textContent = '連線失敗，請稍後再試';
+        });
+      });
+    });
+  });
+}
+
+// 通用：File[] → base64 陣列
+function readFileList(files, cb) {
+  var out = [], i = 0;
+  (function next(){
+    if (i >= files.length) { cb(out); return; }
+    var f = files[i], r = new FileReader();
+    r.onload = function(){
+      var d = String(r.result), c = d.indexOf(',');
+      out.push({ name: f.name, mimeType: f.type || 'application/octet-stream', dataBase64: c >= 0 ? d.substring(c + 1) : d });
+      i++; next();
+    };
+    r.onerror = function(){ i++; next(); };
+    r.readAsDataURL(f);
+  })();
+}
+
 function renderAssigned() {
   updateAsgSummary();
   var box = $('assignedList');
@@ -537,7 +672,7 @@ function renderAssigned() {
       '</button>' +
       '<div class="issue-body">' +
         '<div class="issue-meta">單號 ' + esc(it.id) + '　·　回報人：' + esc(it.reporterName) + '（' + esc(it.reporterEmpId) + '）</div>' +
-        '<div class="issue-desc">' + esc(it.description) + '</div>' + att + reply +
+        '<div class="issue-desc">' + esc(it.description) + '</div>' + att + renderProgress(it.progress, '🛠 處理進度') + reply + progressForm(it) +
       '</div>' +
     '</div>';
   }).join('');
@@ -557,6 +692,7 @@ function renderAssigned() {
       } else { OPEN_ASG = null; }
     });
   });
+  bindProgressForms(box);
 }
 
 function loadSystems() {
