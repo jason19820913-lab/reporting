@@ -40,6 +40,8 @@
   .brand-sub { font-size: 10.5px; color: var(--text-muted); letter-spacing: 3px; margin-top: 2px; }
   .brand a { margin-left: auto; font-size: 12.5px; color: var(--teal-deep); text-decoration: none; }
   .brand a:hover { text-decoration: underline; }
+  .btn-logout { margin-left: 12px; padding: 6px 14px; border-radius: 16px; border: 1.5px solid #D5E5E5; background: var(--white); color: var(--brown); font-family: inherit; font-size: 12.5px; cursor: pointer; letter-spacing: 1px; }
+  .btn-logout:hover { background: var(--cream-deep); }
 
   .card {
     background: var(--white); border-radius: 16px; box-shadow: 0 20px 60px rgba(42,157,159,.14);
@@ -226,6 +228,7 @@
       <div class="brand-sub">SYSTEM ISSUE REPORT</div>
     </div>
     <a id="linkPortal" href="https://jason19820913-lab.github.io/drking/">← 回入口網站</a>
+    <button type="button" class="btn-logout" id="btnLogout" style="display:none;">登出</button>
   </div>
 
   <!-- 分頁切換（登入後才顯示） -->
@@ -346,6 +349,9 @@
 var API = 'https://script.google.com/macros/s/AKfycbzH52RfuQaSbx1iyMbTHSIqC2ydsJPDz6SsWIYSCqpgVo9oCOymLu7B3JmSteprsYk/exec';
 var PORTAL_URL = 'https://jason19820913-lab.github.io/drking/';
 var PORTAL_STORAGE_KEY = 'eliteClinicPortalUser';   // 入口網站登入後存的 localStorage key（同網域共用）
+var LOGIN_AT_KEY = 'eliteClinicLoginAt';     // 入口網登入時間戳（4 小時有效）
+var LAST_SEEN_KEY = 'eliteClinicLastSeen';   // 心跳：任一分頁開著就每 15 秒更新
+var IDLE_LOGOUT_MS = 2 * 60 * 1000;          // 所有分頁關閉超過這麼久 → 視為離開，強制重新登入（0 = 停用）
 var ROLE_LABEL = { doctor: '醫師', nurse: '護理師', desk: '櫃檯', assistant: '助理', admin: '管理員', staff: '員工' };
 var MAX_FILES = 3, MAX_SIZE = 5 * 1024 * 1024;
 
@@ -360,9 +366,32 @@ function fmtBytes(b){ return b < 1024 ? b + ' B' : b < 1048576 ? (b/1024).toFixe
 function getPortalUser() {
   try {
     var u = JSON.parse(localStorage.getItem(PORTAL_STORAGE_KEY) || 'null');
-    return (u && u.empId && u.name) ? u : null;
+    if (!(u && u.empId && u.name)) return null;
+    if (isPortalSessionStale()) { clearPortalLogin(); return null; }
+    return u;
   } catch (e) { return null; }
 }
+// 頁面全部關掉一段時間，或超過入口網 4 小時上限 → 視為已登出
+function isPortalSessionStale() {
+  try {
+    var loginAt = parseInt(localStorage.getItem(LOGIN_AT_KEY) || '0', 10);
+    if (loginAt && Date.now() - loginAt > 4 * 60 * 60 * 1000) return true;
+    var seen = parseInt(localStorage.getItem(LAST_SEEN_KEY) || '0', 10);
+    if (IDLE_LOGOUT_MS > 0 && seen && Date.now() - seen > IDLE_LOGOUT_MS) return true;
+  } catch (e) {}
+  return false;
+}
+function clearPortalLogin() {
+  try {
+    localStorage.removeItem(PORTAL_STORAGE_KEY);
+    localStorage.removeItem(LOGIN_AT_KEY);
+    localStorage.removeItem(LAST_SEEN_KEY);
+  } catch (e) {}
+}
+function heartbeat() { if (getPortalUser()) { try { localStorage.setItem(LAST_SEEN_KEY, String(Date.now())); } catch (e) {} } }
+setInterval(function(){ if (!document.hidden) heartbeat(); }, 15000);
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) heartbeat(); });
+window.addEventListener('pagehide', heartbeat);
 
 function apiGet(params, cb, errCb) {
   var q = Object.keys(params).map(function(k){ return encodeURIComponent(k) + '=' + encodeURIComponent(params[k] == null ? '' : params[k]); }).join('&');
@@ -377,6 +406,7 @@ function showMsg(t){ var m = $('formMsg'); m.className = 'msg'; m.textContent = 
 function show(view) {
   ['viewNoLogin', 'viewForm', 'viewMine', 'viewAssigned', 'viewDone'].forEach(function(id){ $(id).style.display = id === view ? 'block' : 'none'; });
   $('tabs').style.display = (view === 'viewNoLogin') ? 'none' : 'flex';
+  $('btnLogout').style.display = (view === 'viewNoLogin') ? 'none' : 'inline-block';
   document.querySelectorAll('.tab').forEach(function(t){
     t.classList.toggle('active', t.getAttribute('data-view') === view || (view === 'viewDone' && t.id === 'tabForm'));
   });
@@ -385,6 +415,7 @@ function show(view) {
 function init() {
   USER = getPortalUser();
   if (!USER) { show('viewNoLogin'); return; }
+  heartbeat();
 
   $('rEmpId').textContent = USER.empId;
   $('rName').textContent = USER.name;
@@ -792,6 +823,12 @@ $('btnReload').addEventListener('click', loadMyIssues);
 $('btnReloadAsg').addEventListener('click', loadAssigned);
 $('btnSubmit').addEventListener('click', submit);
 $('btnRecheck').addEventListener('click', init);
+$('btnLogout').addEventListener('click', function(){
+  clearPortalLogin();   // 與入口網共用同一份登入狀態，這裡登出＝入口網也登出
+  USER = null;
+  show('viewNoLogin');
+  window.scrollTo(0, 0);
+});
 $('btnAnother').addEventListener('click', init);
 $('linkSwitch').addEventListener('click', function(e){ e.preventDefault(); location.href = PORTAL_URL; });
 $('issueFiles').addEventListener('change', function(e){
