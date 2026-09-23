@@ -251,6 +251,7 @@
           <a class="btn btn-primary btn-sm" style="text-decoration:none;display:inline-block;" href="https://jason19820913-lab.github.io/drking/">前往入口網站登入</a>
           <button type="button" class="btn btn-ghost btn-sm" id="btnRecheck">我已登入，重新檢查</button>
         </div>
+        <div id="recheckHint" style="font-size:12.5px;color:#9B4B4B;margin-top:8px;min-height:18px;"></div>
       </div>
     </div>
     <div style="height:16px;"></div>
@@ -377,6 +378,8 @@ function isPortalSessionStale() {
     var loginAt = parseInt(localStorage.getItem(LOGIN_AT_KEY) || '0', 10);
     if (loginAt && Date.now() - loginAt > 4 * 60 * 60 * 1000) return true;
     var seen = parseInt(localStorage.getItem(LAST_SEEN_KEY) || '0', 10);
+    // 心跳比登入時間還舊 → 是上一次登入留下的，不算數（登入 = 重新計時）
+    if (loginAt && seen && seen < loginAt) seen = 0;
     if (IDLE_LOGOUT_MS > 0 && seen && Date.now() - seen > IDLE_LOGOUT_MS) return true;
   } catch (e) {}
   return false;
@@ -822,7 +825,16 @@ document.querySelectorAll('.tab').forEach(function(t){
 $('btnReload').addEventListener('click', loadMyIssues);
 $('btnReloadAsg').addEventListener('click', loadAssigned);
 $('btnSubmit').addEventListener('click', submit);
-$('btnRecheck').addEventListener('click', init);
+$('btnRecheck').addEventListener('click', function(){
+  init();
+  if (!USER) {
+    var n = document.querySelector('#viewNoLogin .notice');
+    n.style.transition = 'box-shadow .2s'; n.style.boxShadow = '0 0 0 4px rgba(230,126,34,.35)';
+    setTimeout(function(){ n.style.boxShadow = ''; }, 900);
+    var hint = $('recheckHint');
+    if (hint) hint.textContent = '仍未偵測到登入。請在入口網站登入後，再回到本頁點此按鈕；若剛登入過，請先重新整理入口網站頁面。';
+  }
+});
 $('btnLogout').addEventListener('click', function(){
   clearPortalLogin();   // 與入口網共用同一份登入狀態，這裡登出＝入口網也登出
   USER = null;
